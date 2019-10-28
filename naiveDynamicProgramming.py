@@ -1,7 +1,7 @@
 def findAlignments(sequence1, sequence2):
     alignmentScoreMatrix, alignmentBacktrackMatrix = initialiseMatrices(sequence1, sequence2)
     score = 0
-    finalIndicesOfBestAlignment = (0,0)
+    coordinateOfBest = (0,0)
 
     for i in range (1, len(alignmentScoreMatrix)):
         for j in range (1, len(alignmentScoreMatrix[0])):
@@ -14,9 +14,9 @@ def findAlignments(sequence1, sequence2):
 
             if alignmentScoreMatrix[i][j] > score:
                 score = alignmentScoreMatrix[i][j]
-                finalIndicesOfBestAlignment = (i,j)
+                coordinateOfBest = (i,j)
 
-    sequence1Indices, sequence2Indices = backtrackAndReturnIndicesOfAlignment(alignmentBacktrackMatrix, finalIndicesOfBestAlignment)
+    sequence1Indices, sequence2Indices = backtrackAndReturnIndicesOfAlignment(alignmentBacktrackMatrix, coordinateOfBest)
 
     print(alignmentScoreMatrix)
     print(alignmentBacktrackMatrix)
