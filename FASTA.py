@@ -1,17 +1,17 @@
 import numpy as np
 
 
-def heuralign(alphabet, scoringMatrix, seq1, seq2, seedLength=3, bandWidth=32):
+def heuralign(alphabet, scoringMatrix, seq1, seq2, seedLength=3, bandWidth=32, greedyExpansionThreshold=0):
     seeds = generateSeeds(seedLength, seq1, seq2)
     if seeds.size == 0:
         if seedLength > 1:
             return heuralign(alphabet, scoringMatrix, seq1, seq2, seedLength - 1)
         else:
             return (0, [], [])
-
     alphabet += '-'
 
-    expandedSeeds = expandSeeds(seeds, alphabet, scoringMatrix, (seq1, seq2))
+    expandedSeeds = expandSeeds(
+        seeds, alphabet, scoringMatrix, (seq1, seq2), greedyExpansionThreshold)
     expandedSeeds.view("int8, uint8, uint8, uint8").sort(order=['f0'], axis=0)
     highestScoringSeeds = np.unique(expandedSeeds)[-10:][::-1]
 
@@ -30,7 +30,7 @@ def generateSeeds(seedLength, seq1, seq2):
     return np.array(seeds, dtype="int8, uint8, uint8, uint8")
 
 
-def expandSeeds(seeds, alphabet, scoringMatrix, sequences, greedyExpansionThreshold=0):
+def expandSeeds(seeds, alphabet, scoringMatrix, sequences, greedyExpansionThreshold):
     seq1, seq2 = sequences
     for i in range(len(seeds)):
         scoreOfSeed = 0
@@ -105,97 +105,82 @@ def bandedSmithWaterman(seeds, width, alphabet, scoringMatrix, sequences):
         sumOfScores += seed[0]
     diagonal = diagonal // sumOfScores
 
-    alignmentScoreMatrix = np.zeros((len(seq2) + 1, width), dtype="int8")
-    indexBacktrackMatrix = np.chararray((len(seq2) + 1, width))
+    if diagonal < 0:
+        i = -1 - width
+        j = -diagonal - width // 2
+    else:
+        i = diagonal - width // 2
+        j = -1
 
+    smithWatermanDict = {}
     currentBestScore = -1
     coordOfBestScore = (-1, -1)
-    for j in range(-1, len(seq2)):
-        for i in range(width):
-            alignmentScoreMatrix[j+1, i], indexBacktrackMatrix[j+1, i] = align(
-                j, i, diagonal, width, alignmentScoreMatrix, alphabet, scoringMatrix, sequences)
+    while i < len(seq1) and j < len(seq2):
+        if j > -2:
+            for k in range(width):
+                smithWatermanDict[(i+k, j)] = align(
+                    i+k, j, smithWatermanDict, alphabet, scoringMatrix, sequences)
 
-            if alignmentScoreMatrix[j+1, i] > currentBestScore:
-                currentBestScore = alignmentScoreMatrix[j+1, i]
-                coordOfBestScore = (j+1, i)
+                if smithWatermanDict[(i+k, j)]["score"] > currentBestScore:
+                    currentBestScore = smithWatermanDict[(i+k, j)]["score"]
+                    coordOfBestScore = (i+k, j)
+        i += 1
+        j += 1
 
-    indices1, indices2 = backtrackFrom(indexBacktrackMatrix,
-                                       coordOfBestScore, diagonal, width)
+    indices1, indices2 = backtrackFrom(smithWatermanDict, coordOfBestScore)
     return currentBestScore, indices1, indices2
 
 
-def align(j, i, diagonal, width, scores, alphabet, scoringMatrix, sequences):
+def align(i, j, scores, alphabet, scoringMatrix, sequences):
     seq1, seq2 = sequences
-    seq1Index = j + diagonal + (i - width // 2)
 
     # ie index out of range
-    if seq1Index < -1 or seq1Index >= len(seq1):
-        return -1, 'X'
+    if i < -1 or i >= len(seq1):
+        return {"score": -1, "direction": 'G'}
 
     # ie at position (0,0) in a smith-waterman matrix
-    if j == -1 and seq1Index == -1:
-        score = getScoreOfMatchingCharactersFromScoringMatrix(
-            alphabet, scoringMatrix, '-', '-')
-        return max(0, score), 'G'
+    if j == -1 and i == -1:
+        return {"score": 0, "direction": 'G'}
 
-    parameters = i, j, seq1Index, scores, width, alphabet, scoringMatrix, seq1, seq2
-
-    # ie the first row of a smith-waterman matrix
-    if j == -1:
-        return max(left(*parameters), (0, 'G'))
-
-    # ie the first column of a smith-waterman matrix
-    if seq1Index == -1:
-        return max(up(*parameters), (0, 'G'))
+    parameters = i, j, scores, alphabet, scoringMatrix, seq1, seq2
 
     # general case
-    return max(left(*parameters), up(*parameters), diag(*parameters), (0, 'G'))
+    maxAsTuple = max(left(*parameters), up(*parameters),
+                     diag(*parameters), (0, 'G'))
+    return {"score": maxAsTuple[0], "direction": maxAsTuple[1]}
 
 
-def left(i, j, seq1Index, scores, width, alphabet, scoringMatrix, seq1, seq2):
-    if i == 0:  # ie no value to the left of this one
-        return -1, 'X'
-
+def left(i, j, scores, alphabet, scoringMatrix, seq1, seq2):
     return (getScoreOfMatchingCharactersFromScoringMatrix(
-            alphabet, scoringMatrix, '-', seq1[seq1Index]) + scores[j+1, i-1], 'L')
+            alphabet, scoringMatrix, '-', seq1[i]) + scores.get((i-1, j), {"score": float("-inf")})["score"], 'L')
 
 
-def up(i, j, seq1Index, scores, width, alphabet, scoringMatrix, seq1, seq2):
-    if i == width-1:  # ie no value above this one
-        return -1, 'X'
-
+def up(i, j, scores, alphabet, scoringMatrix, seq1, seq2):
     return (getScoreOfMatchingCharactersFromScoringMatrix(
-            alphabet, scoringMatrix, seq2[j], '-') + scores[j, i+1], 'U')
+            alphabet, scoringMatrix, seq2[j], '-') + scores.get((i, j-1), {"score": float("-inf")})["score"], 'U')
 
 
-def diag(i, j, seq1Index, scores, width, alphabet, scoringMatrix, seq1, seq2):
+def diag(i, j, scores, alphabet, scoringMatrix, seq1, seq2):
     return (getScoreOfMatchingCharactersFromScoringMatrix(
-            alphabet, scoringMatrix, seq2[j], seq1[seq1Index]) + scores[j, i], 'D')
+            alphabet, scoringMatrix, seq2[j], seq1[i]) + scores.get((i-1, j-1), {"score": float("-inf")})["score"], 'D')
 
 
-def backtrackFrom(matrix, startPoint, diagonal, width):
-    j, i = startPoint
-    seq1index = j + diagonal + (i - width // 2)
-    seq2index = j
+def backtrackFrom(dictionary, startPoint):
+    i, j = startPoint
     indices1, indices2 = [], []
-    state = matrix[startPoint]
+    state = dictionary[startPoint]["direction"]
 
-    while state != b'G':
-        if state == b'D':
+    while state != 'G':
+        if state == 'D':
+            indices1.insert(0, i)
+            indices2.insert(0, j)
+            i -= 1
             j -= 1
-            seq1index -= 1
-            seq2index -= 1
-            indices1.insert(0, seq1index)
-            indices2.insert(0, seq2index)
-        elif state == b'U':
+        elif state == 'U':
             j -= 1
-            i += 1
-            seq2index -= 1
         else:
             i -= 1
-            seq1index -= 1
-
-        state = matrix[(j, i)]
+        state = dictionary[(i, j)]["direction"]
 
     return indices1, indices2
 
@@ -207,8 +192,6 @@ matrix = [
     [-5, -5, 5, -5, -4],
     [-5, -5, -5, 6, -4],
     [-1, -1, -4, -4, -9]
-
-
 ]
 
 # Expected output:
