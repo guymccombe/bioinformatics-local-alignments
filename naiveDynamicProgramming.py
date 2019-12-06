@@ -8,8 +8,8 @@ def dynprog(alphabet, scoringMatrix, sequence1, sequence2):
     for i in range(1, len(alignmentScoreMatrix)):
         for j in range(1, len(alignmentScoreMatrix[0])):
             alignmentScoreMatrix[i][j], alignmentBacktrackMatrix[i][j] = max([
-                (alignmentScoreMatrix[i-1][j-1] + getScoreOfMatchingCharactersFromScoringMatrix(alphabet,
-                                                                                                scoringMatrix, sequence1[i-1], sequence2[j-1]), 'D'),
+                (alignmentScoreMatrix[i-1][j-1] + getScoreOfMatchingCharactersFromScoringMatrix(
+                    alphabet, scoringMatrix, sequence1[i-1], sequence2[j-1]), 'D'),
                 (alignmentScoreMatrix[i-1][j] + getScoreOfMatchingCharactersFromScoringMatrix(
                     alphabet, scoringMatrix, sequence1[i-1], '-'), 'U'),
                 (alignmentScoreMatrix[i][j-1] + getScoreOfMatchingCharactersFromScoringMatrix(
@@ -79,15 +79,6 @@ def backtrackAndReturnIndicesOfAlignment(backtrackMatrix, startCoordinate):
         currentState = backtrackMatrix[i][j]
 
     return indices1, indices2
-
-
-# Expected output:
-# Score:    5
-# Indices:  [3,5,6][1,2,3]
-a = dynprog("ABC", [[1, -1, -2, -1], [-1, 2, -4, -1],
-                    [-2, -4, 3, -2], [-1, -1, -2, 0]], "AABBAACA", "CBACCCBA")
-print("Score:   ", a[0])
-print("Indices: ", a[1], a[2])
 
 
 alphabet = "ABCD"

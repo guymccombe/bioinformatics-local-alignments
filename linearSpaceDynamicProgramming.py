@@ -66,9 +66,6 @@ def trimAndFlipSequences(seq1, seq2, trimPoint):
 
 
 def hirschberg(alphabet, scoringMatrix, seq1, seq2, offsetX=0, offsetY=0, isLeftTree=True):
-    print(f"HIRSCHBERG ON {seq1}   {seq2}")
-    if (isLeftTree):
-        print("This is a left tree")
     if len(seq1) == 0 or len(seq2) == 0:
         return [], []
 
@@ -105,14 +102,6 @@ def hirschberg(alphabet, scoringMatrix, seq1, seq2, offsetX=0, offsetY=0, isLeft
                            seq1[midX:], seq2[midY:], offsetX + midX, offsetY + midY, isLeftTree=False)
         return left[0] + right[0], left[1] + right[1]
 
-
-# Expected output:
-# Score:    5
-# Indices:  [3,5,6][1,2,3]
-a = dynproglin("ABC", [[1, -1, -2, -1], [-1, 2, -4, -1],
-                       [-2, -4, 3, -2], [-1, -1, -2, 0]], "AABBAACA", "CBACCCBA")
-print("Score:   ", a[0])
-print("Indices: ", a[1], a[2])
 
 alphabet = "ABCD"
 matrix = [

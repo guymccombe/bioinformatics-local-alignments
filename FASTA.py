@@ -194,14 +194,6 @@ matrix = [
     [-1, -1, -4, -4, -9]
 ]
 
-# Expected output:
-# Score:    5
-# Indices:  [3,5,6][1,2,3]
-a = heuralign("ABC", [[1, -1, -2, -1], [-1, 2, -4, -1],
-                      [-2, -4, 3, -2], [-1, -1, -2, 0]], "AABBAACA", "CBACCCBA")
-print("Score:   ", a[0])
-print("Indices: ", a[1], a[2])
-
 alphabet = "ABCD"
 matrix = [
     [1, -5, -5, -5, -1],

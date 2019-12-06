@@ -29,12 +29,6 @@ def getScoreOfMatchingCharactersFromScoringMatrix(character1, character2):
     return out
 
 
-alphabet = "ABC-"
-scoringMatrix = [[1, -1, -2, -1], [-1, 2, -4, -1],
-                 [-2, -4, 3, -2], [-1, -1, -2, 0]]
-
-print(alignmentScoreChecker(("AABBAACA", "CBACCCBA"), ([3, 5, 6], [1, 2, 3])))
-
 alphabet = "ABCD-"
 scoringMatrix = [
     [1, -5, -5, -5, -1],
